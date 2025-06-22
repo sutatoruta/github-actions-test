@@ -42,7 +42,7 @@ jobs:
         run: |
           sudo sysctl iogpu.wired_limit_mb=6000
           SECONDS=0
-          plamo-translate --from English --to Japanese --no-stream < "LICENSE" > "LICENSE_ja"
+          plamo-translate --from English --to Japanese < "LICENSE" > "LICENSE_ja"
           echo "Translation took $SECONDS seconds"
           cat "LICENSE_ja"
         shell: bash
@@ -59,7 +59,7 @@ jobs:
           server_pid=$!
           grep -m 1 "running" "${FIFO_PIPE}" > /dev/null # Wait for the server to start
 
-          plamo-translate --from English --to Japanese --no-stream < "LICENSE" > "LICENSE_ja"
+          plamo-translate --from English --to Japanese < "LICENSE" > "LICENSE_ja"
           echo "Translation took $SECONDS seconds"
           kill ${server_pid}
           rm -f "${FIFO_PIPE}"
@@ -78,7 +78,7 @@ jobs:
           server_pid=$!
           grep -m 1 "running" "${FIFO_PIPE}" > /dev/null # Wait for the server to start
 
-          plamo-translate --from English --to Japanese --no-stream< ".github/workflows/translate.yml" > "translate_ja.yml"
+          plamo-translate --from English --to Japanese < ".github/workflows/translate.yml" > "translate_ja.yml"
           echo "Translation took $SECONDS seconds"
           kill ${server_pid}
           rm -f "${FIFO_PIPE}"
