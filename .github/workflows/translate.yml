@@ -87,7 +87,7 @@ jobs:
 
 
       - name: Cache Hugging Face Models
-        if: ${{ !cancelled() }} && steps.hf-cache-restore.outputs.cache-hit != 'true'
+        if: steps.hf-cache-restore.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: ${{ steps.hf-cache.outputs.model-dir }}
