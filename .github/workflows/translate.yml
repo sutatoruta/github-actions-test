@@ -40,7 +40,7 @@ jobs:
 
       - name: Run plamo-translate
         run: |
-          sudo sysctl iogpu.wired_limit_mb=6000
+          sudo sysctl iogpu.wired_limit_mb=5600
           SECONDS=0
           plamo-translate --from English --to Japanese < "LICENSE" > "LICENSE_ja"
           echo "Translation took $SECONDS seconds"
@@ -49,6 +49,7 @@ jobs:
 
       - name: Run plamo-translate server-style
         run: |
+          sudo sysctl iogpu.wired_limit_mb=5600
           SECONDS=0
           temp_dir="${RUNNER_TEMP}/plamo-translate-action"
           mkdir -p "${temp_dir}"
@@ -68,6 +69,7 @@ jobs:
 
       - name: Run plamo-translate server-style-2
         run: |
+          sudo sysctl iogpu.wired_limit_mb=5600
           SECONDS=0
           temp_dir="${RUNNER_TEMP}/plamo-translate-action"
           mkdir -p "${temp_dir}"
