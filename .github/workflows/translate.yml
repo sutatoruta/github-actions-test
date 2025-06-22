@@ -11,6 +11,9 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
@@ -34,9 +37,6 @@ jobs:
           key: ${{ runner.os }}-plamo-translate-model-${{ steps.hf-cache.outputs.plamo-translate-model }}
           restore-keys: |
             ${{ runner.os }}-plamo-translate-model-
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
       - name: Run plamo-translate
         run: |
@@ -64,6 +64,26 @@ jobs:
           rm -f "${FIFO_PIPE}"
           cat "LICENSE_ja"
         shell: bash
+
+      - name: Run plamo-translate server-style-2
+        run: |
+          SECONDS=0
+          temp_dir="${RUNNER_TEMP}/plamo-translate-action"
+          mkdir -p "${temp_dir}"
+
+          FIFO_PIPE="${temp_dir}/server-output"
+          mkfifo "${FIFO_PIPE}"
+          (plamo-translate server > "${FIFO_PIPE}" 2>&1 ) &
+          server_pid=$!
+          grep -m 1 "running" "${FIFO_PIPE}" > /dev/null # Wait for the server to start
+
+          plamo-translate --from English --to Japanese < ".github/workflows/translate.yml" > "translate_ja.yml"
+          echo "Translation took $SECONDS seconds"
+          kill ${server_pid}
+          rm -f "${FIFO_PIPE}"
+          cat "translate_ja.yml"
+        shell: bash
+
 
       - name: Cache Hugging Face Models
         if: always() && ${{ steps.hf-cache-restore.outputs.cache-hit != 'true' }}
