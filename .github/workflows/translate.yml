@@ -38,9 +38,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-plamo-translate-model-
 
+      - name: Increase max GPU memory if needed
+        run: |
+          current_max_memory_in_mb=$(uv run ./SystemRecommendedGPUMemoryInMB.py)
+          recommended_memory_in_mb="5700"
+          echo "Current max GPU memory: ${current_max_memory_in_mb} MB"
+          if (( current_max_memory_in_mb < recommended_memory_in_mb )); then
+            sudo sysctl iogpu.wired_limit_mb="${recommended_memory_in_mb}"
+            echo "Max GPU memory set to ${recommended_memory_in_mb} MB"
+          fi
+        shell: bash
+
       - name: Run plamo-translate
         run: |
-          sudo sysctl iogpu.wired_limit_mb=5700
           SECONDS=0
           plamo-translate --from English --to Japanese < "LICENSE" > "LICENSE_ja"
           echo "Translation took $SECONDS seconds"
