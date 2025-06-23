@@ -40,7 +40,7 @@ jobs:
 
       - name: Run plamo-translate
         run: |
-          sudo sysctl iogpu.wired_limit_mb=5800
+          sudo sysctl iogpu.wired_limit_mb=5700
           SECONDS=0
           plamo-translate --from English --to Japanese < "LICENSE" > "LICENSE_ja"
           echo "Translation took $SECONDS seconds"
@@ -87,7 +87,7 @@ jobs:
 
 
       - name: Cache Hugging Face Models
-        if: steps.hf-cache-restore.outputs.cache-hit != 'true'
+        if: ${{ steps.hf-cache-restore.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v4
         with:
           path: ${{ steps.hf-cache.outputs.model-dir }}
