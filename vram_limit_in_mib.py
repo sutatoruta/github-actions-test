@@ -11,14 +11,14 @@ import subprocess
 import mlx.core as mx
 
 
-def system_recommended_gpu_memory_limit_mib() -> float:
+def system_recommended_vram_limit_mib() -> float:
     """
     Returns the maximum GPU memory size (in MiB) that can be allocated,
     as set by the system (not necessarily the physical maximum).
     Raises an exception if Metal is not available.
 
     Returns:
-        float: Memory size in MiB as set by the system.
+        float: VRAM limit size in MiB as set by the system.
     Raises:
         RuntimeError: If Metal is not available.
     """
@@ -32,8 +32,8 @@ def system_recommended_gpu_memory_limit_mib() -> float:
 
 
 if __name__ == "__main__":
-    recommended_size_mib = int(system_recommended_gpu_memory_limit_mib())
-    current_wired_limit = int(
+    recommended_size_mib = int(system_recommended_vram_limit_mib())
+    current_wired_limit_mib = int(
         subprocess.run(
             "sysctl -n iogpu.wired_limit_mb".split(),
             text=True,
@@ -41,4 +41,4 @@ if __name__ == "__main__":
         ).stdout.strip()
     )
 
-    print(max(recommended_size_mib, current_wired_limit))
+    print(max(recommended_size_mib, current_wired_limit_mib))

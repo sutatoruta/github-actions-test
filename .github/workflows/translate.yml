@@ -38,25 +38,31 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-plamo-translate-model-
 
-      - name: Increase wired GPU memory limit if needed
+      - name: Increase VRAM limit if needed
         run: |
-          current_limit_in_mib=$(uv run ./WiredGPUMemoryLimitInMiB.py)
+          current_limit_in_mib=$(uv run ./vram_limit_in_mib.py)
           if (( current_limit_in_mib > MEMORY_FOR_MODEL_IN_MIB )); then
               echo "Current ${current_limit_in_mib} MiB limit is sufficient."
               exit 0
           fi
 
           physical_memory_in_mib=$(( $(sysctl -n hw.memsize) / 1024 / 1024))
-          if (( MEMORY_FOR_MODEL_IN_MIB + MEMORY_FOR_SYSTEM_IN_MIB > physical_memory_in_mib )); then
-              echo "Not enough physical memory available for allocating ${MEMORY_FOR_MODEL_IN_MIB} MiB."
-              MEMORY_FOR_MODEL_IN_MIB=$(( physical_memory_in_mib - MEMORY_FOR_SYSTEM_IN_MIB ))
+          if (( MEMORY_FOR_MODEL_IN_MIB + MINIMUM_MEMORY_FOR_SYSTEM_IN_MIB > physical_memory_in_mib )); then
+              echo "Not enough physical memory available for allocating ${MEMORY_FOR_MODEL_IN_MIB} MiB VRAM."
+              MEMORY_FOR_MODEL_IN_MIB=$(( physical_memory_in_mib - MINIMUM_MEMORY_FOR_SYSTEM_IN_MIB ))
           fi
 
-          sudo sysctl iogpu.wired_limit_mb="${MEMORY_FOR_MODEL_IN_MIB}"
-          echo "Wired GPU memory limit set from ${current_limit_in_mib} to ${MEMORY_FOR_MODEL_IN_MIB} MiB."
+          os_version=$(sw_vers -productVersion)
+          os_major_version=${os_version%%.*}
+          if (( os_major_version >= 14 )); then
+              sudo sysctl iogpu.wired_limit_mb="${MEMORY_FOR_MODEL_IN_MIB}"
+          else
+              sudo sysctl debug.iogpu.wired_limit=$(( MEMORY_FOR_MODEL_IN_MIB * 1024 * 1024 )) # Convert MiB to bytes
+          fi
+          echo "VRAM limit increased from ${current_limit_in_mib} MiB to ${MEMORY_FOR_MODEL_IN_MIB} MiB."
         env:
           MEMORY_FOR_MODEL_IN_MIB: 5700
-          MEMORY_FOR_SYSTEM_IN_MIB: 1024
+          MINIMUM_MEMORY_FOR_SYSTEM_IN_MIB: 1024
         shell: bash
 
       - name: Run plamo-translate
