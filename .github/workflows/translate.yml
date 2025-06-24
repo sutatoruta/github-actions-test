@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 jobs:
   translate:
-    runs-on: macos-latest
+    runs-on: macos-13
     timeout-minutes: 30
     permissions:
       contents: write
@@ -17,104 +17,105 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Install plamo-translate
-        run: uv tool install -p 3.12 plamo-translate
-        shell: bash
+      # - name: Install plamo-translate
+      #   run: uv tool install -p 3.12 plamo-translate
+      #   shell: bash
 
-      - name: Get Hugging Face Models cache info
-        id: hf-cache
-        run: |
-          plamo_translate_model_dir_name="models--mlx-community--plamo-2-translate"
-          echo "model-dir=${HOME}/.cache/huggingface/hub/${plamo_translate_model_dir_name}" >> $GITHUB_OUTPUT
-          echo "plamo-translate-model=${plamo_translate_model_dir_name}" >> $GITHUB_OUTPUT
-        shell: bash
+      # - name: Get Hugging Face Models cache info
+      #   id: hf-cache
+      #   run: |
+      #     plamo_translate_model_dir_name="models--mlx-community--plamo-2-translate"
+      #     echo "model-dir=${HOME}/.cache/huggingface/hub/${plamo_translate_model_dir_name}" >> $GITHUB_OUTPUT
+      #     echo "plamo-translate-model=${plamo_translate_model_dir_name}" >> $GITHUB_OUTPUT
+      #   shell: bash
 
-      - name: Download Hugging Face Models cache
-        id: hf-cache-restore
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ steps.hf-cache.outputs.model-dir }}
-          key: ${{ runner.os }}-plamo-translate-model-${{ steps.hf-cache.outputs.plamo-translate-model }}
-          restore-keys: |
-            ${{ runner.os }}-plamo-translate-model-
+      # - name: Download Hugging Face Models cache
+      #   id: hf-cache-restore
+      #   uses: actions/cache/restore@v4
+      #   with:
+      #     path: ${{ steps.hf-cache.outputs.model-dir }}
+      #     key: ${{ runner.os }}-plamo-translate-model-${{ steps.hf-cache.outputs.plamo-translate-model }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-plamo-translate-model-
 
       - name: Increase VRAM limit if needed
         run: |
-          current_limit_in_mib=$(uv run ./vram_limit_in_mib.py)
-          if (( current_limit_in_mib > MEMORY_FOR_MODEL_IN_MIB )); then
-              echo "Current ${current_limit_in_mib} MiB limit is sufficient."
-              exit 0
-          fi
+          # current_limit_in_mib=$(uv run ./vram_limit_in_mib.py)
+          # if (( current_limit_in_mib > MEMORY_FOR_MODEL_IN_MIB )); then
+          #     echo "Current ${current_limit_in_mib} MiB limit is sufficient."
+          #     exit 0
+          # fi
 
-          physical_memory_in_mib=$(( $(sysctl -n hw.memsize) / 1024 / 1024))
-          if (( MEMORY_FOR_MODEL_IN_MIB + MINIMUM_MEMORY_FOR_SYSTEM_IN_MIB > physical_memory_in_mib )); then
-              echo "Not enough physical memory available for allocating ${MEMORY_FOR_MODEL_IN_MIB} MiB VRAM."
-              MEMORY_FOR_MODEL_IN_MIB=$(( physical_memory_in_mib - MINIMUM_MEMORY_FOR_SYSTEM_IN_MIB ))
-          fi
+          # physical_memory_in_mib=$(( $(sysctl -n hw.memsize) / 1024 / 1024))
+          # if (( MEMORY_FOR_MODEL_IN_MIB + MINIMUM_MEMORY_FOR_SYSTEM_IN_MIB > physical_memory_in_mib )); then
+          #     echo "Not enough physical memory available for allocating ${MEMORY_FOR_MODEL_IN_MIB} MiB VRAM."
+          #     MEMORY_FOR_MODEL_IN_MIB=$(( physical_memory_in_mib - MINIMUM_MEMORY_FOR_SYSTEM_IN_MIB ))
+          # fi
 
           os_version=$(sw_vers -productVersion)
           os_major_version=${os_version%%.*}
           if (( os_major_version >= 14 )); then
               sudo sysctl iogpu.wired_limit_mb="${MEMORY_FOR_MODEL_IN_MIB}"
           else
+              sysctl debug.iogpu
               sudo sysctl debug.iogpu.wired_limit=$(( MEMORY_FOR_MODEL_IN_MIB * 1024 * 1024 )) # Convert MiB to bytes
           fi
-          echo "VRAM limit increased from ${current_limit_in_mib} MiB to ${MEMORY_FOR_MODEL_IN_MIB} MiB."
+          # echo "VRAM limit increased from ${current_limit_in_mib} MiB to ${MEMORY_FOR_MODEL_IN_MIB} MiB."
         env:
           MEMORY_FOR_MODEL_IN_MIB: 5700
           MINIMUM_MEMORY_FOR_SYSTEM_IN_MIB: 1024
         shell: bash
 
-      - name: Run plamo-translate
-        run: |
-          SECONDS=0
-          plamo-translate --from English --to Japanese < "LICENSE" > "LICENSE_ja"
-          echo "Translation took $SECONDS seconds"
-          cat "LICENSE_ja"
-        shell: bash
+      # - name: Run plamo-translate
+      #   run: |
+      #     SECONDS=0
+      #     plamo-translate --from English --to Japanese < "LICENSE" > "LICENSE_ja"
+      #     echo "Translation took $SECONDS seconds"
+      #     cat "LICENSE_ja"
+      #   shell: bash
 
-      - name: Run plamo-translate server-style
-        run: |
-          SECONDS=0
-          temp_dir="${RUNNER_TEMP}/plamo-translate-action"
-          mkdir -p "${temp_dir}"
+      # - name: Run plamo-translate server-style
+      #   run: |
+      #     SECONDS=0
+      #     temp_dir="${RUNNER_TEMP}/plamo-translate-action"
+      #     mkdir -p "${temp_dir}"
 
-          FIFO_PIPE="${temp_dir}/server-output"
-          mkfifo "${FIFO_PIPE}"
-          (plamo-translate server > "${FIFO_PIPE}" 2>&1 ) &
-          server_pid=$!
-          grep -m 1 "running" "${FIFO_PIPE}" > /dev/null # Wait for the server to start
+      #     FIFO_PIPE="${temp_dir}/server-output"
+      #     mkfifo "${FIFO_PIPE}"
+      #     (plamo-translate server > "${FIFO_PIPE}" 2>&1 ) &
+      #     server_pid=$!
+      #     grep -m 1 "running" "${FIFO_PIPE}" > /dev/null # Wait for the server to start
 
-          plamo-translate --from English --to Japanese < "LICENSE" > "LICENSE_ja"
-          echo "Translation took $SECONDS seconds"
-          kill ${server_pid}
-          rm -f "${FIFO_PIPE}"
-          cat "LICENSE_ja"
-        shell: bash
+      #     plamo-translate --from English --to Japanese < "LICENSE" > "LICENSE_ja"
+      #     echo "Translation took $SECONDS seconds"
+      #     kill ${server_pid}
+      #     rm -f "${FIFO_PIPE}"
+      #     cat "LICENSE_ja"
+      #   shell: bash
 
-      - name: Run plamo-translate server-style-2
-        run: |
-          SECONDS=0
-          temp_dir="${RUNNER_TEMP}/plamo-translate-action"
-          mkdir -p "${temp_dir}"
+      # - name: Run plamo-translate server-style-2
+      #   run: |
+      #     SECONDS=0
+      #     temp_dir="${RUNNER_TEMP}/plamo-translate-action"
+      #     mkdir -p "${temp_dir}"
 
-          FIFO_PIPE="${temp_dir}/server-output"
-          mkfifo "${FIFO_PIPE}"
-          (plamo-translate server > "${FIFO_PIPE}" 2>&1 ) &
-          server_pid=$!
-          grep -m 1 "running" "${FIFO_PIPE}" > /dev/null # Wait for the server to start
+      #     FIFO_PIPE="${temp_dir}/server-output"
+      #     mkfifo "${FIFO_PIPE}"
+      #     (plamo-translate server > "${FIFO_PIPE}" 2>&1 ) &
+      #     server_pid=$!
+      #     grep -m 1 "running" "${FIFO_PIPE}" > /dev/null # Wait for the server to start
 
-          plamo-translate --from English --to Japanese < ".github/workflows/translate.yml" > "translate_ja.yml"
-          echo "Translation took $SECONDS seconds"
-          kill ${server_pid}
-          rm -f "${FIFO_PIPE}"
-          cat "translate_ja.yml"
-        shell: bash
+      #     plamo-translate --from English --to Japanese < ".github/workflows/translate.yml" > "translate_ja.yml"
+      #     echo "Translation took $SECONDS seconds"
+      #     kill ${server_pid}
+      #     rm -f "${FIFO_PIPE}"
+      #     cat "translate_ja.yml"
+      #   shell: bash
 
 
-      - name: Cache Hugging Face Models
-        if: ${{ steps.hf-cache-restore.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ steps.hf-cache.outputs.model-dir }}
-          key: ${{ steps.hf-cache-restore.outputs.cache-primary-key }}
+      # - name: Cache Hugging Face Models
+      #   if: ${{ steps.hf-cache-restore.outputs.cache-hit != 'true' }}
+      #   uses: actions/cache/save@v4
+      #   with:
+      #     path: ${{ steps.hf-cache.outputs.model-dir }}
+      #     key: ${{ steps.hf-cache-restore.outputs.cache-primary-key }}
